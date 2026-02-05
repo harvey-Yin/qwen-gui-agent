@@ -226,7 +226,7 @@ def main():
             latest_step = st.session_state.current_steps[-1]
             try:
                 img = decode_base64_image(latest_step.screenshot_b64)
-                st.image(img, caption=f"步骤 {latest_step.step_number} 截图", use_container_width=True)
+                st.image(img, caption=f"步骤 {latest_step.step_number} 截图", use_column_width=True)
             except Exception as e:
                 st.warning(f"无法显示截图: {e}")
         else:

@@ -143,7 +143,14 @@ class OllamaClient:
                 "status": "failed"
             })
         
-        return result.get("message", {}).get("content", "")
+        # Handle different response formats
+        message = result.get("message", {})
+        if isinstance(message, str):
+            return message
+        elif isinstance(message, dict):
+            return message.get("content", "")
+        else:
+            return ""
     
     def parse_action_response(self, response: str) -> Dict[str, Any]:
         """
