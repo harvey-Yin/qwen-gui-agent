@@ -91,6 +91,12 @@ class ActionParser:
         """Extract JSON from text that may contain other content."""
         # Remove thinking tags
         text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
+        # Remove /no_think or /think markers
+        text = re.sub(r'/no_think|/think', '', text)
+        text = text.strip()
+        
+        # Remove common prefixes like "步骤1:" or "Step 1:"
+        text = re.sub(r'^(步骤|Step)\s*\d+\s*[:：]\s*', '', text, flags=re.IGNORECASE)
         text = text.strip()
         
         # Try to find JSON block
@@ -99,10 +105,19 @@ class ActionParser:
         if code_match:
             return code_match.group(1)
         
-        # Look for raw JSON
-        json_match = re.search(r'\{[\s\S]*\}', text)
-        if json_match:
-            return json_match.group()
+        # Look for raw JSON - find the first complete JSON object
+        # Use a more robust pattern that handles nested braces
+        brace_count = 0
+        start_idx = -1
+        for i, char in enumerate(text):
+            if char == '{':
+                if brace_count == 0:
+                    start_idx = i
+                brace_count += 1
+            elif char == '}':
+                brace_count -= 1
+                if brace_count == 0 and start_idx != -1:
+                    return text[start_idx:i+1]
         
         return None
     
