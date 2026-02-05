@@ -158,11 +158,34 @@ class ActionParser:
         
         # Validate structure
         try:
+            # Ensure data is a dict
+            if not isinstance(data, dict):
+                return AgentResponse(
+                    thought=f"Response is not a dict: {type(data)}",
+                    action=AgentAction(
+                        type=ActionType.DONE,
+                        params={"message": "Invalid response format"}
+                    ),
+                    status="failed"
+                )
+            
             # Extract components
             thought = data.get("thought", "No thought provided")
             status = data.get("status", "in_progress")
             
             action_data = data.get("action", {})
+            
+            # Handle case where action is a string or None
+            if not isinstance(action_data, dict):
+                return AgentResponse(
+                    thought=thought,
+                    action=AgentAction(
+                        type=ActionType.DONE,
+                        params={"message": f"Invalid action format: {type(action_data)}"}
+                    ),
+                    status="failed"
+                )
+            
             action_type_str = action_data.get("type", "done")
             action_params = action_data.get("params", {})
             
