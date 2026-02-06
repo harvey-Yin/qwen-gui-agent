@@ -3,6 +3,7 @@ Orchestrator for GUI-Agent
 Manages the ReAct loop: Observe -> Think -> Act -> Repeat
 """
 import time
+import logging
 from typing import List, Dict, Any, Optional, Callable
 from dataclasses import dataclass, field
 
@@ -15,6 +16,18 @@ from llm.ollama_client import OllamaClient
 from tools.gui_tools import GUITools
 from tools.screen_capture import ScreenCapture
 from agent.action_parser import ActionParser, ActionType
+
+# Configure logging with absolute path
+LOG_FILE = Path(__file__).parent.parent / 'gui_agent.log'
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler(str(LOG_FILE), encoding='utf-8')
+    ]
+)
+logger = logging.getLogger('Orchestrator')
 
 
 @dataclass
@@ -95,6 +108,9 @@ class Orchestrator:
         Returns:
             TaskResult with execution details
         """
+        logger.info(f"========== 开始新任务 ==========")
+        logger.info(f"任务: {task}")
+        
         self.current_task = task
         self.steps = []
         self.is_running = True
@@ -106,11 +122,15 @@ class Orchestrator:
             if not self.is_running:
                 break
             
+            logger.info(f"---------- 步骤 {step_num} ----------")
+            
             # 1. Observe - Take screenshot
             screenshot_b64 = self.screen.capture_to_base64()
+            logger.debug(f"截图完成, base64 长度: {len(screenshot_b64)}")
             
             # 2. Think - Send to LLM
             user_message = self._build_user_message(task, step_num)
+            logger.info(f"[发送给LLM] {user_message}")
             
             llm_response = self.llm.chat_with_image(
                 user_message=user_message,
@@ -118,8 +138,13 @@ class Orchestrator:
                 history=conversation_history
             )
             
+            logger.info(f"[LLM原始响应] {llm_response}")
+            
             # Parse response
             parsed = self.parser.parse(llm_response)
+            logger.info(f"[解析结果] thought: {parsed.thought}")
+            logger.info(f"[解析结果] action: {parsed.action.type.value}, params: {parsed.action.params}")
+            logger.info(f"[解析结果] status: {parsed.status}")
             
             # 3. Act - Execute action
             action_dict = {
@@ -127,6 +152,8 @@ class Orchestrator:
                 "params": parsed.action.params
             }
             success, result_msg = self.tools.execute_action(action_dict)
+            logger.info(f"[执行结果] success: {success}, message: {result_msg}")
+
             
             # Record step
             step = Step(
