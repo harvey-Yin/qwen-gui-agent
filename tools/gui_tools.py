@@ -185,8 +185,16 @@ class GUITools:
         Returns:
             Tuple of (success, message)
         """
+        # Handle case where action is not a dict
+        if not isinstance(action, dict):
+            return False, f"Invalid action format: {type(action)}"
+        
         action_type = action.get("type", "")
         params = action.get("params", {})
+        
+        # Ensure params is a dict
+        if not isinstance(params, dict):
+            params = {}
         
         if action_type == "click":
             x = params.get("x", 0)

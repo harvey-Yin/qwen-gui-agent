@@ -157,9 +157,15 @@ class Orchestrator:
             # Check if done
             if parsed.status == "completed" or parsed.action.type == ActionType.DONE:
                 self.is_running = False
+                # Handle params safely
+                params = parsed.action.params
+                if isinstance(params, dict):
+                    message = params.get("message", "Task completed")
+                else:
+                    message = str(params) if params else "Task completed"
                 return TaskResult(
                     success=True,
-                    message=parsed.action.params.get("message", "Task completed"),
+                    message=message,
                     steps=self.steps,
                     total_time=time.time() - start_time
                 )
