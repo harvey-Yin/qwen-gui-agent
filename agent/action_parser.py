@@ -175,8 +175,20 @@ class ActionParser:
             
             action_data = data.get("action", {})
             
-            # Handle case where action is a string or None
-            if not isinstance(action_data, dict):
+            # Handle alternative format: {"action": "type", "params": {...}}
+            # instead of expected: {"action": {"type": "...", "params": {...}}}
+            if isinstance(action_data, str):
+                # LLM used action as the type directly
+                action_type_str = action_data
+                action_params = data.get("params", {})
+                # Ensure params is a dict
+                if not isinstance(action_params, dict):
+                    action_params = {}
+            elif isinstance(action_data, dict):
+                # Standard format
+                action_type_str = action_data.get("type", "done")
+                action_params = action_data.get("params", {})
+            else:
                 return AgentResponse(
                     thought=thought,
                     action=AgentAction(
@@ -185,9 +197,6 @@ class ActionParser:
                     ),
                     status="failed"
                 )
-            
-            action_type_str = action_data.get("type", "done")
-            action_params = action_data.get("params", {})
             
             # Validate action type
             try:
