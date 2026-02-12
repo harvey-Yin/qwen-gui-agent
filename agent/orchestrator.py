@@ -12,7 +12,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import config
-from llm.ollama_client import OllamaClient
+from llm import create_client
+from llm.base_client import VLMClient
 from tools.gui_tools import GUITools
 from tools.screen_capture import ScreenCapture
 from agent.action_parser import ActionParser, ActionType
@@ -67,14 +68,14 @@ class Orchestrator:
     
     def __init__(
         self,
-        llm_client: Optional[OllamaClient] = None,
+        llm_client: Optional[VLMClient] = None,
         gui_tools: Optional[GUITools] = None,
         screen_capture: Optional[ScreenCapture] = None,
         max_steps: int = config.MAX_STEPS,
         step_delay: float = config.STEP_DELAY,
         on_step_callback: Optional[Callable[[Step], None]] = None
     ):
-        self.llm = llm_client or OllamaClient()
+        self.llm = llm_client or create_client()
         self.tools = gui_tools or GUITools()
         self.screen = screen_capture or ScreenCapture()
         self.parser = ActionParser()

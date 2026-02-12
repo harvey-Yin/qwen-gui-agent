@@ -1,9 +1,17 @@
 # Configuration for GUI-Agent
 import os
 
+# LLM Provider: "ollama" | "openai_compat"
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama")
+
 # Ollama settings
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3-vl:8b")
+
+# OpenAI-compatible API settings (Qwen API / SiliconFlow / OpenRouter)
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "qwen-vl-max-latest")
 
 # Agent settings
 MAX_STEPS = 20  # Maximum steps per task

@@ -1,0 +1,64 @@
+[
+  {
+    "id": "open_notepad",
+    "description": "打开记事本",
+    "category": "app_launch",
+    "max_steps": 5,
+    "verify": {
+      "type": "process_running",
+      "process": "notepad.exe"
+    }
+  },
+  {
+    "id": "open_calculator",
+    "description": "打开计算器",
+    "category": "app_launch",
+    "max_steps": 5,
+    "verify": {
+      "type": "process_running",
+      "process": "Calculator.exe"
+    }
+  },
+  {
+    "id": "open_explorer",
+    "description": "打开文件资源管理器",
+    "category": "app_launch",
+    "max_steps": 5,
+    "verify": {
+      "type": "process_running",
+      "process": "explorer.exe"
+    }
+  },
+  {
+    "id": "type_in_notepad",
+    "description": "打开记事本，然后输入 Hello World",
+    "category": "text_input",
+    "max_steps": 10,
+    "prerequisites": [],
+    "verify": {
+      "type": "window_contains_text",
+      "window_title": "记事本",
+      "text": "Hello World"
+    }
+  },
+  {
+    "id": "hotkey_win_r",
+    "description": "使用 Win+R 打开运行对话框",
+    "category": "hotkey",
+    "max_steps": 3,
+    "verify": {
+      "type": "window_exists",
+      "window_title": "运行"
+    }
+  },
+  {
+    "id": "open_browser",
+    "description": "打开默认浏览器",
+    "category": "app_launch",
+    "max_steps": 6,
+    "verify": {
+      "type": "process_running_any",
+      "processes": ["chrome.exe", "msedge.exe", "firefox.exe"]
+    }
+  }
+]
