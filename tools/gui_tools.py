@@ -22,6 +22,88 @@ class GUITools:
     
     def __init__(self):
         self.action_log: List[Dict[str, Any]] = []
+        self._dpi_scale: Optional[float] = None
+
+    def _get_dpi_scale(self) -> float:
+        """
+        Detect Windows DPI scale factor.
+        Returns 1.0 for 100%, 1.25 for 125%, 1.5 for 150%, etc.
+        """
+        if self._dpi_scale is not None:
+            return self._dpi_scale
+        try:
+            import ctypes
+            # Make this process DPI-aware so we get real physical resolution
+            ctypes.windll.user32.SetProcessDPIAware()
+            physical_w = ctypes.windll.user32.GetSystemMetrics(0)
+            logical_w = pyautogui.size()[0]
+            self._dpi_scale = physical_w / logical_w if logical_w > 0 else 1.0
+        except Exception:
+            self._dpi_scale = 1.0
+        return self._dpi_scale
+
+    def convert_coordinates(
+        self, x: int, y: int,
+        image_size: Optional[Tuple[int, int]] = None,
+        screen_size: Optional[Tuple[int, int]] = None,
+        model_name: str = "",
+    ) -> Tuple[int, int]:
+        """
+        Convert VLM output coordinates to real screen pixel coordinates.
+
+        Supports three modes via config.COORD_FORMAT:
+          - "normalized_1000": Qwen3-VL (Ollama) — coords in 0-1000 grid
+          - "absolute":        Qwen API / Qwen2.5-VL — pixel coords matching image sent to LLM
+          - "auto":            Auto-detect based on model name
+
+        Also handles DPI scaling: screenshots are taken at physical resolution,
+        but pyautogui operates in logical (DPI-scaled) coordinates.
+
+        Args:
+            x, y: Raw coordinates from the VLM
+            image_size: (width, height) of the image sent to VLM
+            screen_size: (width, height) for pyautogui (logical pixels)
+            model_name: name of the model (for auto-detection)
+
+        Returns:
+            (screen_x, screen_y) in pyautogui's coordinate space
+        """
+        if screen_size is None:
+            screen_size = pyautogui.size()
+        sw, sh = screen_size  # pyautogui logical size
+
+        coord_format = config.COORD_FORMAT
+
+        if coord_format == "auto":
+            # Qwen3-VL (local Ollama) uses normalized 0-1000 grid.
+            # Qwen API models (qwen-vl-max, qwen-vl-plus) and Qwen2.5-VL
+            # use absolute pixel coordinates matching the input image.
+            model_lower = model_name.lower()
+            if "qwen3" in model_lower:
+                coord_format = "normalized_1000"
+            else:
+                coord_format = "absolute"
+
+        if coord_format == "normalized_1000":
+            # Qwen3-VL: coordinates in a 0-1000 normalized grid → map to logical screen
+            real_x = round(x / 1000 * (sw - 1))
+            real_y = round(y / 1000 * (sh - 1))
+        elif coord_format == "absolute" and image_size:
+            # Model outputs absolute pixel coordinates relative to the image.
+            # The image was captured at physical resolution, but pyautogui
+            # uses logical (DPI-scaled) coordinates.
+            iw, ih = image_size
+            # image coords → logical screen coords
+            real_x = round(x / iw * sw)
+            real_y = round(y / ih * sh)
+        else:
+            # Fallback: use raw coordinates as-is
+            real_x, real_y = x, y
+
+        # Clamp to screen bounds
+        real_x = max(0, min(real_x, sw - 1))
+        real_y = max(0, min(real_y, sh - 1))
+        return real_x, real_y
     
     def _log_action(self, action_type: str, params: Dict[str, Any], success: bool):
         """Log an action for debugging."""
@@ -175,40 +257,49 @@ class GUITools:
         self._log_action("wait", {"seconds": seconds}, True)
         return True
     
-    def execute_action(self, action: Dict[str, Any]) -> Tuple[bool, str]:
+    def execute_action(
+        self,
+        action: Dict[str, Any],
+        image_size: Optional[Tuple[int, int]] = None,
+        model_name: str = "",
+    ) -> Tuple[bool, str]:
         """
         Execute an action from LLM response.
-        
+
         Args:
             action: Action dict with 'type' and 'params'
-            
+            image_size: (width, height) of the image sent to the LLM (for coordinate conversion)
+            model_name: name of the VLM model (for auto-detecting coordinate format)
+
         Returns:
             Tuple of (success, message)
         """
         # Handle case where action is not a dict
         if not isinstance(action, dict):
             return False, f"Invalid action format: {type(action)}"
-        
+
         action_type = action.get("type", "")
         params = action.get("params", {})
-        
+
         # Ensure params is a dict
         if not isinstance(params, dict):
             params = {}
-        
+
         if action_type == "click":
-            x = params.get("x", 0)
-            y = params.get("y", 0)
+            raw_x = params.get("x", 0)
+            raw_y = params.get("y", 0)
+            x, y = self.convert_coordinates(raw_x, raw_y, image_size=image_size, model_name=model_name)
             button = params.get("button", "left")
             clicks = params.get("clicks", 1)
             success = self.click(x, y, button, clicks)
-            return success, f"Clicked at ({x}, {y})"
-        
+            return success, f"Clicked at ({x}, {y}) [raw: ({raw_x}, {raw_y})]"
+
         elif action_type == "move":
-            x = params.get("x", 0)
-            y = params.get("y", 0)
+            raw_x = params.get("x", 0)
+            raw_y = params.get("y", 0)
+            x, y = self.convert_coordinates(raw_x, raw_y, image_size=image_size, model_name=model_name)
             success = self.move(x, y)
-            return success, f"Moved to ({x}, {y})"
+            return success, f"Moved to ({x}, {y}) [raw: ({raw_x}, {raw_y})]"
         
         elif action_type == "type":
             text = params.get("text", "")
@@ -222,8 +313,12 @@ class GUITools:
         
         elif action_type == "scroll":
             amount = params.get("amount", 0)
-            x = params.get("x")
-            y = params.get("y")
+            raw_x = params.get("x")
+            raw_y = params.get("y")
+            if raw_x is not None and raw_y is not None:
+                x, y = self.convert_coordinates(raw_x, raw_y, image_size=image_size, model_name=model_name)
+            else:
+                x, y = raw_x, raw_y
             success = self.scroll(amount, x, y)
             return success, f"Scrolled {amount}"
         

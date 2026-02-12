@@ -126,8 +126,8 @@ class Orchestrator:
             logger.info(f"---------- 步骤 {step_num} ----------")
             
             # 1. Observe - Take screenshot
-            screenshot_b64 = self.screen.capture_to_base64()
-            logger.debug(f"截图完成, base64 长度: {len(screenshot_b64)}")
+            screenshot_b64, img_w, img_h = self.screen.capture_to_base64()
+            logger.debug(f"截图完成, base64 长度: {len(screenshot_b64)}, 图片尺寸: {img_w}x{img_h}")
             
             # 2. Think - Send to LLM
             user_message = self._build_user_message(task, step_num)
@@ -152,7 +152,11 @@ class Orchestrator:
                 "type": parsed.action.type.value,
                 "params": parsed.action.params
             }
-            success, result_msg = self.tools.execute_action(action_dict)
+            success, result_msg = self.tools.execute_action(
+                action_dict,
+                image_size=(img_w, img_h),
+                model_name=self.llm.get_model_name(),
+            )
             logger.info(f"[执行结果] success: {success}, message: {result_msg}")
 
             

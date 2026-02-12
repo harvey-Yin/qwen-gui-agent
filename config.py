@@ -10,8 +10,14 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3-vl:8b")
 
 # OpenAI-compatible API settings (Qwen API / SiliconFlow / OpenRouter)
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "qwen-vl-max-latest")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "sk-4bf30eb02a044c1396c2ae329828c50f")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "qwen3-vl-flash")
+
+# Coordinate format output by the VLM
+# "auto"            = Auto-detect based on model name (recommended)
+# "normalized_1000" = Force Qwen3-VL style (coordinates in 0-1000 grid)
+# "absolute"        = Force absolute pixel coordinates (Qwen API / Qwen2.5-VL)
+COORD_FORMAT = os.getenv("COORD_FORMAT", "auto")
 
 # Agent settings
 MAX_STEPS = 20  # Maximum steps per task
