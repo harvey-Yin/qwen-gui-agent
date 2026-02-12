@@ -1,0 +1,113 @@
+{
+  "model_name": "qwen3-vl-flash",
+  "provider": "openai_compat",
+  "timestamp": 1770883394.0884695,
+  "summary": {
+    "task_completion_rate": 1.0,
+    "verification_rate": 1.0,
+    "avg_steps": 3.9,
+    "avg_response_time_s": 13.74
+  },
+  "scores": [
+    {
+      "task_id": "open_notepad",
+      "description": "打开记事本",
+      "completed": true,
+      "verified": true,
+      "steps_used": 4,
+      "max_steps": 5,
+      "response_time": 15.61,
+      "json_parse_rate": 1.0
+    },
+    {
+      "task_id": "open_calculator",
+      "description": "打开计算器",
+      "completed": true,
+      "verified": true,
+      "steps_used": 4,
+      "max_steps": 5,
+      "response_time": 14.35,
+      "json_parse_rate": 1.0
+    },
+    {
+      "task_id": "open_explorer",
+      "description": "打开文件资源管理器",
+      "completed": true,
+      "verified": true,
+      "steps_used": 4,
+      "max_steps": 5,
+      "response_time": 14.54,
+      "json_parse_rate": 1.0
+    },
+    {
+      "task_id": "type_in_notepad",
+      "description": "打开记事本，然后输入 Hello World",
+      "completed": true,
+      "verified": true,
+      "steps_used": 5,
+      "max_steps": 10,
+      "response_time": 18.03,
+      "json_parse_rate": 1.0
+    },
+    {
+      "task_id": "hotkey_win_r",
+      "description": "使用 Win+R 打开运行对话框",
+      "completed": true,
+      "verified": true,
+      "steps_used": 2,
+      "max_steps": 3,
+      "response_time": 6.27,
+      "json_parse_rate": 1.0
+    },
+    {
+      "task_id": "open_browser",
+      "description": "打开默认浏览器",
+      "completed": true,
+      "verified": true,
+      "steps_used": 4,
+      "max_steps": 6,
+      "response_time": 14.19,
+      "json_parse_rate": 1.0
+    },
+    {
+      "task_id": "open_settings",
+      "description": "打开 Windows 设置",
+      "completed": true,
+      "verified": true,
+      "steps_used": 4,
+      "max_steps": 5,
+      "response_time": 13.29,
+      "json_parse_rate": 1.0
+    },
+    {
+      "task_id": "open_cmd",
+      "description": "使用 Win+R 打开命令提示符",
+      "completed": true,
+      "verified": true,
+      "steps_used": 4,
+      "max_steps": 6,
+      "response_time": 13.88,
+      "json_parse_rate": 1.0
+    },
+    {
+      "task_id": "notepad_save_as",
+      "description": "打开记事本，输入 test，然后按 Ctrl+S 弹出保存对话框",
+      "completed": true,
+      "verified": true,
+      "steps_used": 6,
+      "max_steps": 10,
+      "response_time": 21.05,
+      "json_parse_rate": 1.0
+    },
+    {
+      "task_id": "open_task_manager",
+      "description": "使用快捷键 Ctrl+Shift+Esc 打开任务管理器",
+      "completed": true,
+      "verified": true,
+      "steps_used": 2,
+      "max_steps": 3,
+      "response_time": 6.18,
+      "json_parse_rate": 1.0
+    }
+  ]
+}

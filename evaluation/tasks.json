@@ -16,7 +16,7 @@
     "max_steps": 5,
     "verify": {
       "type": "process_running",
-      "process": "Calculator.exe"
+      "process": "CalculatorApp.exe"
     }
   },
   {
@@ -34,7 +34,6 @@
     "description": "打开记事本，然后输入 Hello World",
     "category": "text_input",
     "max_steps": 10,
-    "prerequisites": [],
     "verify": {
       "type": "window_contains_text",
       "window_title": "记事本",
@@ -59,6 +58,46 @@
     "verify": {
       "type": "process_running_any",
       "processes": ["chrome.exe", "msedge.exe", "firefox.exe"]
+    }
+  },
+  {
+    "id": "open_settings",
+    "description": "打开 Windows 设置",
+    "category": "app_launch",
+    "max_steps": 5,
+    "verify": {
+      "type": "process_running",
+      "process": "SystemSettings.exe"
+    }
+  },
+  {
+    "id": "open_cmd",
+    "description": "使用 Win+R 打开命令提示符",
+    "category": "app_launch",
+    "max_steps": 6,
+    "verify": {
+      "type": "process_running",
+      "process": "cmd.exe"
+    }
+  },
+  {
+    "id": "notepad_save_as",
+    "description": "打开记事本，输入 test，然后按 Ctrl+S 弹出保存对话框",
+    "category": "multi_step",
+    "max_steps": 10,
+    "verify": {
+      "type": "window_exists",
+      "window_title": "另存为"
+    }
+  },
+  {
+    "id": "open_task_manager",
+    "description": "使用快捷键 Ctrl+Shift+Esc 打开任务管理器",
+    "category": "hotkey",
+    "max_steps": 3,
+    "verify": {
+      "type": "process_running",
+      "process": "Taskmgr.exe"
     }
   }
 ]
