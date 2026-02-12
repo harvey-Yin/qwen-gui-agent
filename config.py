@@ -45,8 +45,11 @@ SYSTEM_PROMPT = """/no_think
 
 【动作类型】
 - hotkey: 按快捷键 {"keys":["win","r"]} 
-- click: 点击 {"x":100,"y":200}
+- click: 单击 {"x":100,"y":200}
+- double_click: 双击 {"x":100,"y":200}
+- right_click: 右键点击 {"x":100,"y":200}
 - type: 输入 {"text":"notepad"}
+- scroll: 滚动 {"amount":3} (正数向上，负数向下)
 - wait: 等待 {"seconds":1}
 - done: 完成 {"message":"描述"}
 
