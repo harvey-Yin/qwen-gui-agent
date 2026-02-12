@@ -294,6 +294,21 @@ class GUITools:
             success = self.click(x, y, button, clicks)
             return success, f"Clicked at ({x}, {y}) [raw: ({raw_x}, {raw_y})]"
 
+        elif action_type == "double_click":
+            raw_x = params.get("x", 0)
+            raw_y = params.get("y", 0)
+            x, y = self.convert_coordinates(raw_x, raw_y, image_size=image_size, model_name=model_name)
+            button = params.get("button", "left")
+            success = self.click(x, y, button, clicks=2)
+            return success, f"Double-clicked at ({x}, {y}) [raw: ({raw_x}, {raw_y})]"
+
+        elif action_type == "right_click":
+            raw_x = params.get("x", 0)
+            raw_y = params.get("y", 0)
+            x, y = self.convert_coordinates(raw_x, raw_y, image_size=image_size, model_name=model_name)
+            success = self.click(x, y, button="right", clicks=1)
+            return success, f"Right-clicked at ({x}, {y}) [raw: ({raw_x}, {raw_y})]"
+
         elif action_type == "move":
             raw_x = params.get("x", 0)
             raw_y = params.get("y", 0)

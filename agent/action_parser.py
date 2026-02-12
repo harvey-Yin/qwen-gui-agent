@@ -11,6 +11,8 @@ from enum import Enum
 
 class ActionType(str, Enum):
     CLICK = "click"
+    DOUBLE_CLICK = "double_click"
+    RIGHT_CLICK = "right_click"
     MOVE = "move"
     TYPE = "type"
     HOTKEY = "hotkey"
