@@ -79,6 +79,8 @@ class ActionParser:
     
     PARAM_VALIDATORS = {
         ActionType.CLICK: ClickParams,
+        ActionType.DOUBLE_CLICK: ClickParams,
+        ActionType.RIGHT_CLICK: ClickParams,
         ActionType.MOVE: MoveParams,
         ActionType.TYPE: TypeParams,
         ActionType.HOTKEY: HotkeyParams,

@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from agent.orchestrator import Orchestrator, Step, TaskResult
 from llm import create_client
+import config
 
 
 def decode_base64_image(b64_string: str) -> Image.Image:
@@ -140,26 +141,28 @@ def main():
 
         # ── Model Provider ──
         st.subheader("🔌 模型配置")
+        provider_options = ["ollama", "openai_compat"]
+        default_idx = provider_options.index(config.LLM_PROVIDER) if config.LLM_PROVIDER in provider_options else 0
         provider = st.selectbox(
             "Provider",
-            ["ollama", "openai_compat"],
-            index=0,
+            provider_options,
+            index=default_idx,
             key="provider",
             format_func=lambda x: {"ollama": "Ollama (本地)", "openai_compat": "API (Qwen/硅基流动/OpenRouter)"}[x],
         )
 
         if provider == "ollama":
-            st.text_input("Ollama 地址", value="http://localhost:11434", key="api_base_url")
-            st.text_input("模型名称", value="qwen3-vl:8b", key="model_name")
+            st.text_input("Ollama 地址", value=config.OLLAMA_BASE_URL, key="api_base_url")
+            st.text_input("模型名称", value=config.OLLAMA_MODEL, key="model_name")
         else:
             st.text_input(
                 "API Base URL",
-                value="https://dashscope.aliyuncs.com/compatible-mode/v1",
+                value=config.OPENAI_BASE_URL,
                 key="api_base_url",
                 help="Qwen API / SiliconFlow / OpenRouter 的接口地址",
             )
-            st.text_input("API Key", type="password", key="api_key")
-            st.text_input("模型名称", value="qwen-vl-max-latest", key="model_name")
+            st.text_input("API Key", value=config.OPENAI_API_KEY, type="password", key="api_key")
+            st.text_input("模型名称", value=config.OPENAI_MODEL, key="model_name")
 
         # Connection status
         if check_llm_connection():
