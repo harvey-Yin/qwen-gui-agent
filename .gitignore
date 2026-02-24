@@ -17,7 +17,6 @@ env/
 
 # Logs
 *.log
-gui_agent.log
 
 # Distribution
 dist/

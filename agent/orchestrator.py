@@ -128,23 +128,52 @@ class Orchestrator:
             screenshot_b64 = self.screen.capture_to_base64()
             logger.debug(f"截图完成, base64 长度: {len(screenshot_b64)}")
             
-            # 2. Think - Send to LLM
+            # 2. Think - Send to LLM with retry for format errors
             user_message = self._build_user_message(task, step_num)
             logger.info(f"[发送给LLM] {user_message}")
             
-            llm_response = self.llm.chat_with_image(
-                user_message=user_message,
-                image_base64=screenshot_b64,
-                history=conversation_history
-            )
+            # Retry loop for format validation
+            max_retries = 3
+            parsed = None
+            current_message = user_message
+            retry_history = conversation_history.copy()
             
-            logger.info(f"[LLM原始响应] {llm_response}")
-            
-            # Parse response
-            parsed = self.parser.parse(llm_response)
-            logger.info(f"[解析结果] thought: {parsed.thought}")
-            logger.info(f"[解析结果] action: {parsed.action.type.value}, params: {parsed.action.params}")
-            logger.info(f"[解析结果] status: {parsed.status}")
+            for retry in range(max_retries):
+                llm_response = self.llm.chat_with_image(
+                    user_message=current_message,
+                    image_base64=screenshot_b64,
+                    history=retry_history
+                )
+                
+                logger.info(f"[LLM原始响应] (尝试 {retry + 1}/{max_retries}) {llm_response}")
+                
+                # Parse response
+                parsed = self.parser.parse(llm_response)
+                logger.info(f"[解析结果] thought: {parsed.thought}")
+                logger.info(f"[解析结果] action: {parsed.action.type.value}, params: {parsed.action.params}")
+                logger.info(f"[解析结果] status: {parsed.status}")
+                
+                # Check if parsing was successful (not a format error)
+                if parsed.status != "failed" or "Invalid" not in parsed.action.params.get("message", ""):
+                    # Valid response, break retry loop
+                    break
+                
+                if retry < max_retries - 1:
+                    # Format error, ask LLM to retry
+                    logger.warning(f"[格式错误] 请求LLM重新生成...")
+                    retry_history.append({"role": "user", "content": current_message})
+                    retry_history.append({"role": "assistant", "content": llm_response})
+                    current_message = f"""你的回复格式有误。请严格按照以下JSON格式重新回复：
+
+{{"action": "动作类型", "params": {{参数}}}}
+
+例如：
+- 按快捷键: {{"action": "hotkey", "params": {{"keys": ["win", "r"]}}}}
+- 点击: {{"action": "click", "params": {{"x": 100, "y": 200}}}}
+- 输入: {{"action": "type", "params": {{"text": "notepad"}}}}
+- 完成: {{"action": "done", "params": {{"message": "任务完成"}}}}
+
+请重新分析屏幕截图并给出正确格式的JSON响应。"""
             
             # 3. Act - Execute action
             action_dict = {
