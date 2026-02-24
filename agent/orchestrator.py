@@ -12,7 +12,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import config
-from llm.ollama_client import OllamaClient
+from llm import create_client
+from llm.base_client import VLMClient
 from tools.gui_tools import GUITools
 from tools.screen_capture import ScreenCapture
 from agent.action_parser import ActionParser, ActionType
@@ -67,14 +68,14 @@ class Orchestrator:
     
     def __init__(
         self,
-        llm_client: Optional[OllamaClient] = None,
+        llm_client: Optional[VLMClient] = None,
         gui_tools: Optional[GUITools] = None,
         screen_capture: Optional[ScreenCapture] = None,
         max_steps: int = config.MAX_STEPS,
         step_delay: float = config.STEP_DELAY,
         on_step_callback: Optional[Callable[[Step], None]] = None
     ):
-        self.llm = llm_client or OllamaClient()
+        self.llm = llm_client or create_client()
         self.tools = gui_tools or GUITools()
         self.screen = screen_capture or ScreenCapture()
         self.parser = ActionParser()
@@ -125,8 +126,8 @@ class Orchestrator:
             logger.info(f"---------- 步骤 {step_num} ----------")
             
             # 1. Observe - Take screenshot
-            screenshot_b64 = self.screen.capture_to_base64()
-            logger.debug(f"截图完成, base64 长度: {len(screenshot_b64)}")
+            screenshot_b64, img_w, img_h = self.screen.capture_to_base64()
+            logger.debug(f"截图完成, base64 长度: {len(screenshot_b64)}, 图片尺寸: {img_w}x{img_h}")
             
             # 2. Think - Send to LLM with retry for format errors
             user_message = self._build_user_message(task, step_num)
@@ -180,7 +181,11 @@ class Orchestrator:
                 "type": parsed.action.type.value,
                 "params": parsed.action.params
             }
-            success, result_msg = self.tools.execute_action(action_dict)
+            success, result_msg = self.tools.execute_action(
+                action_dict,
+                image_size=(img_w, img_h),
+                model_name=self.llm.get_model_name(),
+            )
             logger.info(f"[执行结果] success: {success}, message: {result_msg}")
 
             

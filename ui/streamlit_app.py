@@ -15,7 +15,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from agent.orchestrator import Orchestrator, Step, TaskResult
-from llm.ollama_client import OllamaClient
+from llm import create_client
+import config
 
 
 def decode_base64_image(b64_string: str) -> Image.Image:
@@ -37,22 +38,40 @@ def init_session_state():
 
 
 def check_llm_connection() -> bool:
-    """Check if Ollama is accessible."""
-    client = OllamaClient()
-    return client.test_connection()
+    """Check if the configured LLM is accessible."""
+    provider = st.session_state.get("provider", "ollama")
+    try:
+        client = create_client(
+            provider=provider,
+            base_url=st.session_state.get("api_base_url", ""),
+            api_key=st.session_state.get("api_key", ""),
+            model=st.session_state.get("model_name", ""),
+        )
+        return client.test_connection()
+    except Exception:
+        return False
 
 
 def run_agent_task(task: str):
     """Run agent task and update session state."""
     st.session_state.is_running = True
     st.session_state.current_steps = []
-    
+
     def on_step(step: Step):
         st.session_state.current_steps.append(step)
-    
-    orchestrator = Orchestrator(on_step_callback=on_step)
+
+    # Build the client from current UI settings
+    provider = st.session_state.get("provider", "ollama")
+    client = create_client(
+        provider=provider,
+        base_url=st.session_state.get("api_base_url", ""),
+        api_key=st.session_state.get("api_key", ""),
+        model=st.session_state.get("model_name", ""),
+    )
+
+    orchestrator = Orchestrator(llm_client=client, on_step_callback=on_step)
     result = orchestrator.run_task(task)
-    
+
     st.session_state.is_running = False
     return result
 
@@ -119,23 +138,51 @@ def main():
     # Sidebar
     with st.sidebar:
         st.header("⚙️ 设置")
-        
+
+        # ── Model Provider ──
+        st.subheader("🔌 模型配置")
+        provider_options = ["ollama", "openai_compat"]
+        default_idx = provider_options.index(config.LLM_PROVIDER) if config.LLM_PROVIDER in provider_options else 0
+        provider = st.selectbox(
+            "Provider",
+            provider_options,
+            index=default_idx,
+            key="provider",
+            format_func=lambda x: {"ollama": "Ollama (本地)", "openai_compat": "API (Qwen/硅基流动/OpenRouter)"}[x],
+        )
+
+        if provider == "ollama":
+            st.text_input("Ollama 地址", value=config.OLLAMA_BASE_URL, key="api_base_url")
+            st.text_input("模型名称", value=config.OLLAMA_MODEL, key="model_name")
+        else:
+            st.text_input(
+                "API Base URL",
+                value=config.OPENAI_BASE_URL,
+                key="api_base_url",
+                help="Qwen API / SiliconFlow / OpenRouter 的接口地址",
+            )
+            st.text_input("API Key", value=config.OPENAI_API_KEY, type="password", key="api_key")
+            st.text_input("模型名称", value=config.OPENAI_MODEL, key="model_name")
+
         # Connection status
         if check_llm_connection():
-            st.success("✅ Ollama 连接正常")
+            st.success("✅ 模型连接正常")
         else:
-            st.error("❌ 无法连接 Ollama")
-            st.info("请确保 Ollama 正在运行")
-        
+            st.error("❌ 无法连接模型")
+            if provider == "ollama":
+                st.info("请确保 Ollama 正在运行")
+            else:
+                st.info("请检查 API Key 和 Base URL")
+
         st.divider()
-        
+
         # Settings
         st.subheader("代理设置")
         max_steps = st.slider("最大步数", 5, 50, 20)
         step_delay = st.slider("步骤间隔 (秒)", 0.1, 2.0, 0.5)
-        
+
         st.divider()
-        
+
         # Instructions
         st.subheader("📖 使用说明")
         st.markdown("""
@@ -143,15 +190,15 @@ def main():
         2. 代理会截图分析屏幕
         3. 自动执行 GUI 操作
         4. 查看执行过程和结果
-        
+
         **示例任务:**
         - 打开记事本
         - 打开浏览器访问百度
         - 打开计算器并计算 1+1
         """)
-        
+
         st.divider()
-        
+
         # Stop button
         if st.session_state.is_running:
             if st.button("🛑 停止执行", type="primary"):

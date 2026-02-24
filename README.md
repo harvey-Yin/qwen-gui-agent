@@ -41,6 +41,134 @@ qwen-gui-agent/
 
 ---
 
+## 🔄 核心执行流程
+
+### ReAct 循环架构
+
+Orchestrator 采用经典的 **ReAct (Reasoning + Acting)** 模式，通过持续的观察-思考-行动循环来完成任务：
+
+```mermaid
+sequenceDiagram
+    participant User as 用户
+    participant Orch as Orchestrator
+    participant Screen as ScreenCapture
+    participant LLM as OllamaClient
+    participant Parser as ActionParser
+    participant GUI as GUITools
+
+    User->>Orch: run_task("打开记事本")
+    
+    loop 每一步 (最多 max_steps 次)
+        Note over Orch: 步骤 1: Observe (观察)
+        Orch->>Screen: capture_to_base64()
+        Screen-->>Orch: screenshot_b64
+        
+        Note over Orch: 步骤 2: Think (思考)
+        Orch->>LLM: chat_with_image(task, screenshot, history)
+        LLM-->>Orch: "思考: 需要点击开始菜单\n动作: click(100, 200)"
+        
+        Note over Orch: 步骤 3: Parse (解析)
+        Orch->>Parser: parse(llm_response)
+        Parser-->>Orch: ParsedResponse(thought, action, status)
+        
+        Note over Orch: 步骤 4: Act (执行)
+        Orch->>GUI: execute_action(action)
+        GUI-->>Orch: (success, result_msg)
+        
+        Note over Orch: 步骤 5: Record (记录)
+        Orch->>Orch: 记录 Step
+        Orch->>User: on_step_callback(step)
+        
+        alt 任务完成
+            Orch-->>User: TaskResult(success=True)
+        else 任务失败
+            Orch-->>User: TaskResult(success=False)
+        else 继续执行
+            Orch->>Orch: sleep(step_delay)
+        end
+    end
+```
+
+### 执行步骤详解
+
+#### 1️⃣ **Observe (观察)**
+
+```python
+screenshot_b64 = self.screen.capture_to_base64()
+```
+
+- 截取当前屏幕状态
+- 转换为 Base64 编码，便于传输给 LLM
+
+#### 2️⃣ **Think (思考)**
+
+```python
+llm_response = self.llm.chat_with_image(
+    user_message=user_message,
+    image_base64=screenshot_b64,
+    history=conversation_history
+)
+```
+
+- 构建提示词（第一步介绍任务，后续步骤强调连续性）
+- 将截图和任务描述发送给 Qwen3-VL
+- 维护对话历史，让 LLM 具有上下文记忆
+
+#### 3️⃣ **Parse (解析)**
+
+```python
+parsed = self.parser.parse(llm_response)
+# 提取: thought (思考), action.type (动作类型), action.params (参数), status (状态)
+```
+
+- 解析 LLM 的自然语言响应
+- 提取结构化信息：思考过程、动作类型（click/type/hotkey/done 等）、参数、执行状态
+
+#### 4️⃣ **Act (执行)**
+
+```python
+success, result_msg = self.tools.execute_action({
+    "type": parsed.action.type.value,
+    "params": parsed.action.params
+})
+```
+
+- 调用 PyAutoGUI 执行实际的 GUI 操作
+- 支持的动作：鼠标点击、键盘输入、快捷键、滚动、等待等
+
+#### 5️⃣ **Record & Callback (记录与回调)**
+
+```python
+step = Step(
+    step_number=step_num,
+    screenshot_b64=screenshot_b64,
+    thought=parsed.thought,
+    action_type=parsed.action.type.value,
+    action_params=parsed.action.params,
+    action_result=result_msg,
+    status=parsed.status
+)
+self.steps.append(step)
+if self.on_step_callback:
+    self.on_step_callback(step)  # 通知 UI 更新
+```
+
+- 记录每一步的完整信息（截图、思考、动作、结果）
+- 通过回调机制实时通知 Streamlit UI 更新
+
+### 退出条件
+
+循环会在以下情况退出：
+
+| 条件          | 说明                                         |
+|---------------|----------------------------------------------|
+| ✅ **任务完成** | LLM 返回 `done` 动作或 `completed` 状态        |
+| ❌ **执行失败** | LLM 返回 `failed` 状态                         |
+| ⏱️ **达到上限** | 执行步数达到 `MAX_STEPS` (默认 20)             |
+| 🛑 **手动停止** | 用户调用 `orchestrator.stop()`                |
+
+---
+
 ## 🚀 快速开始
 
 ### 1. 前置条件

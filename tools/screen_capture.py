@@ -46,29 +46,31 @@ class ScreenCapture:
         self,
         region: Optional[Tuple[int, int, int, int]] = None,
         max_size: Tuple[int, int] = (1920, 1080)
-    ) -> str:
+    ) -> Tuple[str, int, int]:
         """
         Capture screen and return as base64 encoded JPEG.
-        
+
         Args:
             region: Optional region to capture
             max_size: Maximum size to resize to (for faster LLM processing)
-            
+
         Returns:
-            Base64 encoded image string
+            Tuple of (base64_encoded_string, image_width, image_height)
         """
         screenshot = self.capture_screen(region)
-        
+
         # Resize if too large
         if screenshot.width > max_size[0] or screenshot.height > max_size[1]:
             screenshot.thumbnail(max_size, Image.Resampling.LANCZOS)
-        
+
+        img_w, img_h = screenshot.size
+
         # Convert to JPEG and encode
         buffer = io.BytesIO()
         screenshot.save(buffer, format="JPEG", quality=self.quality)
         buffer.seek(0)
-        
-        return base64.b64encode(buffer.read()).decode("utf-8")
+
+        return base64.b64encode(buffer.read()).decode("utf-8"), img_w, img_h
     
     def save_screenshot(
         self,
@@ -98,7 +100,7 @@ if __name__ == "__main__":
     # Test screen capture
     capture = ScreenCapture()
     print(f"Screen size: {capture.get_screen_size()}")
-    
+
     # Take a test screenshot
-    b64 = capture.capture_to_base64()
-    print(f"Screenshot captured, base64 length: {len(b64)}")
+    b64, w, h = capture.capture_to_base64()
+    print(f"Screenshot captured, base64 length: {len(b64)}, image size: {w}x{h}")

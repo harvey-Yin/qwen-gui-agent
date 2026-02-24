@@ -11,9 +11,10 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 import config
+from llm.base_client import VLMClient
 
 
-class OllamaClient:
+class OllamaClient(VLMClient):
     """Client for interacting with Ollama API."""
     
     def __init__(
@@ -26,6 +27,10 @@ class OllamaClient:
         self.chat_endpoint = f"{self.base_url}/api/chat"
         self.generate_endpoint = f"{self.base_url}/api/generate"
     
+    def get_model_name(self) -> str:
+        """Return the name of the current model."""
+        return self.model
+
     def test_connection(self) -> bool:
         """Test if Ollama server is accessible."""
         try:

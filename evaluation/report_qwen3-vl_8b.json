@@ -1,0 +1,73 @@
+{
+  "model_name": "qwen3-vl:8b",
+  "provider": "ollama",
+  "timestamp": 1770865134.8060606,
+  "summary": {
+    "task_completion_rate": 1.0,
+    "verification_rate": 0.3333,
+    "avg_steps": 1.0,
+    "avg_response_time_s": 2.1
+  },
+  "scores": [
+    {
+      "task_id": "open_notepad",
+      "description": "打开记事本",
+      "completed": true,
+      "verified": false,
+      "steps_used": 1,
+      "max_steps": 5,
+      "response_time": 2.11,
+      "json_parse_rate": 0.0
+    },
+    {
+      "task_id": "open_calculator",
+      "description": "打开计算器",
+      "completed": true,
+      "verified": false,
+      "steps_used": 1,
+      "max_steps": 5,
+      "response_time": 2.09,
+      "json_parse_rate": 0.0
+    },
+    {
+      "task_id": "open_explorer",
+      "description": "打开文件资源管理器",
+      "completed": true,
+      "verified": true,
+      "steps_used": 1,
+      "max_steps": 5,
+      "response_time": 2.08,
+      "json_parse_rate": 0.0
+    },
+    {
+      "task_id": "type_in_notepad",
+      "description": "打开记事本，然后输入 Hello World",
+      "completed": true,
+      "verified": false,
+      "steps_used": 1,
+      "max_steps": 10,
+      "response_time": 2.11,
+      "json_parse_rate": 0.0
+    },
+    {
+      "task_id": "hotkey_win_r",
+      "description": "使用 Win+R 打开运行对话框",
+      "completed": true,
+      "verified": false,
+      "steps_used": 1,
+      "max_steps": 3,
+      "response_time": 2.09,
+      "json_parse_rate": 0.0
+    },
+    {
+      "task_id": "open_browser",
+      "description": "打开默认浏览器",
+      "completed": true,
+      "verified": true,
+      "steps_used": 1,
+      "max_steps": 6,
+      "response_time": 2.11,
+      "json_parse_rate": 0.0
+    }
+  ]
+}

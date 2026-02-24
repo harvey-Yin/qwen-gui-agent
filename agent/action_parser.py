@@ -11,6 +11,8 @@ from enum import Enum
 
 class ActionType(str, Enum):
     CLICK = "click"
+    DOUBLE_CLICK = "double_click"
+    RIGHT_CLICK = "right_click"
     MOVE = "move"
     TYPE = "type"
     HOTKEY = "hotkey"
@@ -77,6 +79,8 @@ class ActionParser:
     
     PARAM_VALIDATORS = {
         ActionType.CLICK: ClickParams,
+        ActionType.DOUBLE_CLICK: ClickParams,
+        ActionType.RIGHT_CLICK: ClickParams,
         ActionType.MOVE: MoveParams,
         ActionType.TYPE: TypeParams,
         ActionType.HOTKEY: HotkeyParams,
