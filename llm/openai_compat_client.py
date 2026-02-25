@@ -1,6 +1,6 @@
 """
 OpenAI-Compatible VLM Client for GUI-Agent.
-Supports any OpenAI-compatible API: Qwen API, SiliconFlow, OpenRouter, etc.
+Used for Alibaba Qwen API (DashScope) and other OpenAI-compatible endpoints.
 """
 import json
 import requests
@@ -27,9 +27,9 @@ class OpenAICompatClient(VLMClient):
 
     def __init__(
         self,
-        base_url: str = config.OPENAI_BASE_URL,
-        api_key: str = config.OPENAI_API_KEY,
-        model: str = config.OPENAI_MODEL,
+        base_url: str = config.QWEN_API_BASE_URL,
+        api_key: str = config.QWEN_API_KEY,
+        model: str = config.QWEN_API_MODEL,
     ):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
@@ -95,28 +95,50 @@ class OpenAICompatClient(VLMClient):
             "max_tokens": 1024,
         }
 
-        try:
-            resp = requests.post(
-                self.chat_endpoint,
-                headers=self._headers(),
-                json=payload,
-                timeout=120,
-            )
-            resp.raise_for_status()
-            data = resp.json()
+        max_api_retries = 3
+        wait_seconds = 2
+        last_error = None
 
-            # Extract assistant message
-            choices = data.get("choices", [])
-            if choices:
-                return choices[0].get("message", {}).get("content", "")
-            return ""
+        for attempt in range(max_api_retries):
+            try:
+                resp = requests.post(
+                    self.chat_endpoint,
+                    headers=self._headers(),
+                    json=payload,
+                    timeout=120,
+                )
 
-        except requests.RequestException as e:
-            return json.dumps({
-                "thought": f"Error communicating with API: {e}",
-                "action": {"type": "done", "params": {"message": "API error"}},
-                "status": "failed",
-            })
+                # Handle 429 Rate Limit with exponential backoff
+                if resp.status_code == 429:
+                    import time
+                    retry_after = int(resp.headers.get("Retry-After", wait_seconds))
+                    sleep_time = max(retry_after, wait_seconds)
+                    if attempt < max_api_retries - 1:
+                        time.sleep(sleep_time)
+                        wait_seconds *= 2
+                        continue
+                    else:
+                        last_error = f"429 Rate Limit exceeded after {max_api_retries} retries"
+                        break
+
+                resp.raise_for_status()
+                data = resp.json()
+
+                # Extract assistant message
+                choices = data.get("choices", [])
+                if choices:
+                    return choices[0].get("message", {}).get("content", "")
+                return ""
+
+            except requests.RequestException as e:
+                last_error = str(e)
+                break
+
+        return json.dumps({
+            "thought": f"Error communicating with API: {last_error}",
+            "action": {"type": "done", "params": {"message": "API error"}},
+            "status": "failed",
+        })
 
     # ── helpers ───────────────────────────────────────────────────────
 

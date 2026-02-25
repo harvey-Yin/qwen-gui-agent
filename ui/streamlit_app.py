@@ -37,16 +37,38 @@ def init_session_state():
         st.session_state.current_steps = []
 
 
+def _build_client_kwargs(provider: str) -> dict:
+    """Build kwargs for create_client based on the current provider and UI state."""
+    if provider == "ollama":
+        return {
+            "base_url": st.session_state.get("api_base_url", config.OLLAMA_BASE_URL),
+            "model": st.session_state.get("model_name", config.OLLAMA_MODEL),
+        }
+    elif provider == "qwen_api":
+        return {
+            "base_url": st.session_state.get("api_base_url", config.QWEN_API_BASE_URL),
+            "api_key": st.session_state.get("api_key", config.QWEN_API_KEY),
+            "model": st.session_state.get("model_name", config.QWEN_API_MODEL),
+        }
+    elif provider == "glm_api":
+        return {
+            "api_key": st.session_state.get("api_key", config.GLM_API_KEY),
+            "model": st.session_state.get("model_name", config.GLM_API_MODEL),
+        }
+    elif provider == "glm_local":
+        return {
+            "model_path": st.session_state.get("model_path", config.GLM_LOCAL_MODEL_PATH),
+            "device_map": st.session_state.get("device_map", config.GLM_LOCAL_DEVICE),
+            "torch_dtype": st.session_state.get("torch_dtype", config.GLM_LOCAL_DTYPE),
+        }
+    return {}
+
+
 def check_llm_connection() -> bool:
     """Check if the configured LLM is accessible."""
-    provider = st.session_state.get("provider", "ollama")
+    provider = st.session_state.get("provider", config.LLM_PROVIDER)
     try:
-        client = create_client(
-            provider=provider,
-            base_url=st.session_state.get("api_base_url", ""),
-            api_key=st.session_state.get("api_key", ""),
-            model=st.session_state.get("model_name", ""),
-        )
+        client = create_client(provider=provider, **_build_client_kwargs(provider))
         return client.test_connection()
     except Exception:
         return False
@@ -61,13 +83,8 @@ def run_agent_task(task: str):
         st.session_state.current_steps.append(step)
 
     # Build the client from current UI settings
-    provider = st.session_state.get("provider", "ollama")
-    client = create_client(
-        provider=provider,
-        base_url=st.session_state.get("api_base_url", ""),
-        api_key=st.session_state.get("api_key", ""),
-        model=st.session_state.get("model_name", ""),
-    )
+    provider = st.session_state.get("provider", config.LLM_PROVIDER)
+    client = create_client(provider=provider, **_build_client_kwargs(provider))
 
     orchestrator = Orchestrator(llm_client=client, on_step_callback=on_step)
     result = orchestrator.run_task(task)
@@ -133,7 +150,7 @@ def main():
     
     # Header
     st.markdown('<p class="main-header">🤖 GUI Agent</p>', unsafe_allow_html=True)
-    st.markdown("基于 Qwen3-VL 的智能 GUI 自动化代理")
+    st.markdown("多模型 GUI 自动化代理（Qwen / GLM）")
     
     # Sidebar
     with st.sidebar:
@@ -141,38 +158,57 @@ def main():
 
         # ── Model Provider ──
         st.subheader("🔌 模型配置")
-        provider_options = ["ollama", "openai_compat"]
+        provider_options = ["ollama", "qwen_api", "glm_api", "glm_local"]
+        provider_labels = {
+            "ollama": "① Ollama 本地 (Qwen3-VL)",
+            "qwen_api": "② 阿里云 Qwen API",
+            "glm_api": "③ 智谱 GLM API",
+            "glm_local": "④ 本地 GLM (Transformers)",
+        }
         default_idx = provider_options.index(config.LLM_PROVIDER) if config.LLM_PROVIDER in provider_options else 0
         provider = st.selectbox(
             "Provider",
             provider_options,
             index=default_idx,
             key="provider",
-            format_func=lambda x: {"ollama": "Ollama (本地)", "openai_compat": "API (Qwen/硅基流动/OpenRouter)"}[x],
+            format_func=lambda x: provider_labels[x],
         )
 
         if provider == "ollama":
             st.text_input("Ollama 地址", value=config.OLLAMA_BASE_URL, key="api_base_url")
             st.text_input("模型名称", value=config.OLLAMA_MODEL, key="model_name")
-        else:
-            st.text_input(
-                "API Base URL",
-                value=config.OPENAI_BASE_URL,
-                key="api_base_url",
-                help="Qwen API / SiliconFlow / OpenRouter 的接口地址",
-            )
-            st.text_input("API Key", value=config.OPENAI_API_KEY, type="password", key="api_key")
-            st.text_input("模型名称", value=config.OPENAI_MODEL, key="model_name")
+
+        elif provider == "qwen_api":
+            st.text_input("API Base URL", value=config.QWEN_API_BASE_URL, key="api_base_url",
+                          help="阿里云 DashScope 接口地址")
+            st.text_input("API Key", value=config.QWEN_API_KEY, type="password", key="api_key")
+            st.text_input("模型名称", value=config.QWEN_API_MODEL, key="model_name")
+
+        elif provider == "glm_api":
+            st.text_input("API Key", value=config.GLM_API_KEY, type="password", key="api_key")
+            st.text_input("模型名称", value=config.GLM_API_MODEL, key="model_name",
+                          help="glm-4.6v-flash / glm-4v-plus / glm-4.1v-thinking")
+
+        elif provider == "glm_local":
+            st.text_input("模型路径", value=config.GLM_LOCAL_MODEL_PATH, key="model_path",
+                          help="ModelScope ID 或本地目录")
+            st.text_input("设备", value=config.GLM_LOCAL_DEVICE, key="device_map",
+                          help="auto / cpu / cuda:0")
+            st.text_input("精度", value=config.GLM_LOCAL_DTYPE, key="torch_dtype",
+                          help="float16 (~7GB) / bfloat16 / auto")
 
         # Connection status
-        if check_llm_connection():
-            st.success("✅ 模型连接正常")
-        else:
-            st.error("❌ 无法连接模型")
-            if provider == "ollama":
-                st.info("请确保 Ollama 正在运行")
+        if provider != "glm_local":
+            if check_llm_connection():
+                st.success("✅ 模型连接正常")
             else:
-                st.info("请检查 API Key 和 Base URL")
+                st.error("❌ 无法连接模型")
+                if provider == "ollama":
+                    st.info("请确保 Ollama 正在运行")
+                else:
+                    st.info("请检查 API Key 和接口地址")
+        else:
+            st.info("🖥️ 本地模型将在首次执行时加载")
 
         st.divider()
 
@@ -273,7 +309,7 @@ def main():
             latest_step = st.session_state.current_steps[-1]
             try:
                 img = decode_base64_image(latest_step.screenshot_b64)
-                st.image(img, caption=f"步骤 {latest_step.step_number} 截图", use_column_width=True)
+                st.image(img, caption=f"步骤 {latest_step.step_number} 截图", use_container_width=True)
             except Exception as e:
                 st.warning(f"无法显示截图: {e}")
         else:

@@ -76,8 +76,8 @@ class GUITools:
 
         if coord_format == "auto":
             # Qwen3-VL (local Ollama) uses normalized 0-1000 grid.
-            # Qwen API models (qwen-vl-max, qwen-vl-plus) and Qwen2.5-VL
-            # use absolute pixel coordinates matching the input image.
+            # All other models (GLM API, GLM Local, Qwen API) use absolute
+            # pixel coordinates matching the input image.
             model_lower = model_name.lower()
             if "qwen3" in model_lower:
                 coord_format = "normalized_1000"
