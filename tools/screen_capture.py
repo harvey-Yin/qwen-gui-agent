@@ -45,7 +45,7 @@ class ScreenCapture:
     def capture_to_base64(
         self,
         region: Optional[Tuple[int, int, int, int]] = None,
-        max_size: Tuple[int, int] = (1920, 1080)
+        max_size: Tuple[int, int] = config.SCREENSHOT_MAX_SIZE
     ) -> Tuple[str, int, int]:
         """
         Capture screen and return as base64 encoded JPEG.

@@ -47,33 +47,35 @@ class GLMLocalClient(VLMClient):
         self._loaded = False
 
     def _load_model(self):
-        """Load model and processor on first use."""
+        """Load model and processor on first use (4-bit quantized)."""
         if self._loaded:
             return
 
         logger.info(f"[GLM-Local] Loading model: {self.model_path} ...")
-        logger.info(f"[GLM-Local] device_map={self.device_map}, dtype={self.torch_dtype_str}")
+        logger.info(f"[GLM-Local] device_map={self.device_map}, using 4-bit NF4 quantization")
 
         import torch
         from modelscope import AutoProcessor, Glm4vForConditionalGeneration
+        from transformers import BitsAndBytesConfig
 
-        # Resolve torch dtype
-        dtype_map = {
-            "float16": torch.float16,
-            "bfloat16": torch.bfloat16,
-            "float32": torch.float32,
-            "auto": "auto",
-        }
-        torch_dtype = dtype_map.get(self.torch_dtype_str, "auto")
+        # 4-bit quantization: ~14GB float16 → ~4GB NF4
+        # This ensures the model fits entirely in 12GB VRAM
+        # with room for KV cache and activations.
+        quantization_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.float16,
+            bnb_4bit_use_double_quant=True,
+        )
 
         self._processor = AutoProcessor.from_pretrained(self.model_path)
         self._model = Glm4vForConditionalGeneration.from_pretrained(
             pretrained_model_name_or_path=self.model_path,
-            torch_dtype=torch_dtype,
+            quantization_config=quantization_config,
             device_map=self.device_map,
         )
         self._loaded = True
-        logger.info(f"[GLM-Local] Model loaded successfully on {self._model.device}")
+        logger.info(f"[GLM-Local] Model loaded (4-bit) on {self._model.device}")
 
     # ── interface implementation ──────────────────────────────────────
 
@@ -133,26 +135,35 @@ class GLMLocalClient(VLMClient):
             img_bytes = base64.b64decode(image_base64)
             image = Image.open(BytesIO(img_bytes)).convert("RGB")
 
-            # Build messages in GLM's native format
+            # Build messages in GLM's native format.
+            # GLM's apply_chat_template requires ALL content fields to be
+            # list-of-dicts format: [{"type": "text", "text": "..."}].
+            # Plain strings cause "string indices must be integers".
             messages: List[Dict[str, Any]] = []
 
+            # Embed system prompt into the user message text
+            # (GLM's chat template doesn't handle system role well)
+            prompt_text = user_message
             if system_prompt:
-                messages.append({"role": "system", "content": system_prompt})
+                prompt_text = system_prompt.strip() + "\n\n" + user_message
 
-            # Add text-only history
+            # Add text-only history (content must be list format)
             if history:
                 for msg in history:
-                    messages.append({
-                        "role": msg["role"],
-                        "content": msg.get("content", ""),
-                    })
+                    raw = msg.get("content", "")
+                    # Wrap plain string content as list
+                    if isinstance(raw, str):
+                        content = [{"type": "text", "text": raw}]
+                    else:
+                        content = raw
+                    messages.append({"role": msg["role"], "content": content})
 
             # Current turn: image + text
             messages.append({
                 "role": "user",
                 "content": [
                     {"type": "image", "image": image},
-                    {"type": "text", "text": user_message},
+                    {"type": "text", "text": prompt_text},
                 ],
             })
 

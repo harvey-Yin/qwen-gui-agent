@@ -42,6 +42,10 @@ COORD_FORMAT = os.getenv("COORD_FORMAT", "auto")
 MAX_STEPS = 20          # 每个任务最大步骤数
 STEP_DELAY = 1.0        # 步骤间等待 (秒)
 SCREENSHOT_QUALITY = 85  # JPEG 截图质量
+# 截图最大尺寸 (宽, 高) — 缩小可显著加速本地模型推理
+# 1920x1080 = 原始分辨率 (API 模型推荐)
+# 960x540   = 半分辨率 (本地 GLM 推荐, 减少 ~75% 视觉计算)
+SCREENSHOT_MAX_SIZE = (960, 540)
 
 # ── PyAutoGUI 安全设置 ────────────────────────────────────────────────────────
 PYAUTOGUI_PAUSE = 0.5    # PyAutoGUI 调用间隔
