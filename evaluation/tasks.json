@@ -99,5 +99,16 @@
       "type": "process_running",
       "process": "Taskmgr.exe"
     }
+  },
+  {
+    "id": "open_kdocs_latest_excel",
+    "description": "打开金山云文档网页版并打开最新的在线 Excel 文件",
+    "category": "web_workflow",
+    "max_steps": 20,
+    "workflow": "open_kdocs_latest_excel",
+    "verify": {
+      "type": "window_title_contains",
+      "text": "kdocs.cn"
+    }
   }
 ]

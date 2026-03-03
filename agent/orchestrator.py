@@ -252,6 +252,24 @@ class Orchestrator:
             total_time=time.time() - start_time
         )
     
+    def run_workflow(self, workflow) -> TaskResult:
+        """
+        Execute a workflow (ordered sequence of Skills).
+
+        Each workflow step generates a focused sub-task prompt via its
+        Skill and runs it through run_task(). The workflow handles
+        sequencing, retries, and failure strategies.
+
+        Args:
+            workflow: A BaseWorkflow instance with defined steps.
+
+        Returns:
+            TaskResult with aggregated execution details.
+        """
+        logger.info(f"========== 开始工作流: {workflow.name} ==========")
+        logger.info(f"描述: {workflow.description}")
+        return workflow.run(self)
+
     def stop(self):
         """Stop the current task execution."""
         self.is_running = False

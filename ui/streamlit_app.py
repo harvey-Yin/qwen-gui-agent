@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from agent.orchestrator import Orchestrator, Step, TaskResult
 from llm import create_client
+from workflows import list_workflows, get_workflow
 import config
 
 
@@ -88,6 +89,26 @@ def run_agent_task(task: str):
 
     orchestrator = Orchestrator(llm_client=client, on_step_callback=on_step)
     result = orchestrator.run_task(task)
+
+    st.session_state.is_running = False
+    return result
+
+
+def run_agent_workflow(workflow_name: str):
+    """Run a predefined workflow and update session state."""
+    st.session_state.is_running = True
+    st.session_state.current_steps = []
+
+    def on_step(step: Step):
+        st.session_state.current_steps.append(step)
+
+    # Build the client from current UI settings
+    provider = st.session_state.get("provider", config.LLM_PROVIDER)
+    client = create_client(provider=provider, **_build_client_kwargs(provider))
+
+    orchestrator = Orchestrator(llm_client=client, on_step_callback=on_step)
+    workflow = get_workflow(workflow_name)
+    result = orchestrator.run_workflow(workflow)
 
     st.session_state.is_running = False
     return result
@@ -219,10 +240,42 @@ def main():
 
         st.divider()
 
+        # ── Workflow Selector ──
+        st.subheader("🔄 预设工作流")
+        available_workflows = list_workflows()
+        if available_workflows:
+            workflow_options = {wf["name"]: wf["description"] for wf in available_workflows}
+            selected_workflow = st.selectbox(
+                "选择工作流",
+                options=list(workflow_options.keys()),
+                format_func=lambda x: workflow_options[x],
+                key="selected_workflow",
+            )
+            if st.button(
+                "🚀 执行工作流",
+                disabled=st.session_state.is_running,
+                type="primary",
+            ):
+                st.session_state.messages.append({
+                    "role": "user",
+                    "content": f"🔄 工作流: {workflow_options[selected_workflow]}",
+                })
+                result = run_agent_workflow(selected_workflow)
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": result.message,
+                    "steps": result.steps,
+                })
+                st.rerun()
+        else:
+            st.info("暂无预设工作流")
+
+        st.divider()
+
         # Instructions
         st.subheader("📖 使用说明")
         st.markdown("""
-        1. 在聊天框输入任务
+        1. 在聊天框输入任务，或选择预设工作流
         2. 代理会截图分析屏幕
         3. 自动执行 GUI 操作
         4. 查看执行过程和结果
@@ -231,6 +284,9 @@ def main():
         - 打开记事本
         - 打开浏览器访问百度
         - 打开计算器并计算 1+1
+
+        **预设工作流:**
+        - 打开金山云文档最新 Excel
         """)
 
         st.divider()

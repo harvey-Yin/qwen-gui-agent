@@ -14,6 +14,7 @@ def main():
     print("🤖 Starting GUI-Agent...")
     print(f"   App path: {app_path}")
     print("   Press Ctrl+C to stop\n")
+    https://www.kdocs.cn
     
     # Run Streamlit
     subprocess.run([
